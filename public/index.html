@@ -265,26 +265,37 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // ----- 스크롤 애니메이션 (반복 실행되도록 수정) -----
+        // ----- 스크롤 페이드인/아웃 애니메이션 -----
         const fadeInElements = document.querySelectorAll('.fade-in');
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 if (entry.isIntersecting) {
-                    // 화면에 보이면 'visible' 클래스 추가
                     entry.target.classList.add('visible');
                 } else {
-                    // 화면에서 사라지면 'visible' 클래스 제거
                     entry.target.classList.remove('visible');
                 }
             });
         }, { threshold: 0.1 });
         fadeInElements.forEach(el => observer.observe(el));
 
+        // ----- 아코디언 기능 (위치 수정) -----
+        const songTitles = document.querySelectorAll('.song-title');
+        songTitles.forEach(title => {
+            title.addEventListener('click', () => {
+                title.classList.toggle('active');
+                const performers = title.nextElementSibling;
+                if (performers.style.maxHeight) {
+                    performers.style.maxHeight = null;
+                } else {
+                    performers.style.maxHeight = performers.scrollHeight + "px";
+                }
+            });
+        });
 
+        // ----- 응원의 벽 기능 -----
         const form = document.getElementById('message-form');
         const input = document.getElementById('message-input');
         const bubbleContainer = document.getElementById('bubble-container');
-
         const colors = ['#ffadad', '#ffd6a5', '#fdffb6', '#caffbf', '#9bf6ff', '#a0c4ff', '#bdb2ff', '#ffc6ff'];
         let existingBubbles = [];
 
@@ -303,35 +314,28 @@
         function createBubbleElement(message) {
             const bubble = document.createElement('div');
             bubble.classList.add('message-bubble');
-
             const content = document.createElement('p');
             content.textContent = message.content;
-
             bubble.appendChild(content);
-
             bubble.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
-
             placeBubble(bubble);
             bubbleContainer.appendChild(bubble);
         }
 
         function placeBubble(bubble) {
             const containerRect = bubbleContainer.getBoundingClientRect();
-            const bubbleWidth = 200; // CSS와 동일하게 너비 수정
-            const bubbleHeight = 70; // CSS와 동일하게 높이 수정
+            const bubbleWidth = 140;
+            const bubbleHeight = 70;
             let attempts = 0;
             let isOverlapping;
-
             do {
                 isOverlapping = false;
                 const randomTop = Math.random() * (containerRect.height - bubbleHeight);
                 const randomLeft = Math.random() * (containerRect.width - bubbleWidth);
-
                 const newBubbleRect = {
                     top: randomTop, left: randomLeft,
                     right: randomLeft + bubbleWidth, bottom: randomTop + bubbleHeight
                 };
-
                 for (const existing of existingBubbles) {
                     if (!(newBubbleRect.right < existing.left ||
                         newBubbleRect.left > existing.right ||
@@ -341,13 +345,11 @@
                         break;
                     }
                 }
-
                 if (!isOverlapping) {
                     bubble.style.top = `${randomTop}px`;
                     bubble.style.left = `${randomLeft}px`;
                     existingBubbles.push(newBubbleRect);
                 }
-
                 attempts++;
             } while (isOverlapping && attempts < 100);
         }
@@ -356,28 +358,18 @@
             e.preventDefault();
             const content = input.value.trim();
             if (!content) return;
-
             try {
-                // 1. 서버로 새 메시지 내용을 전송합니다.
                 const response = await fetch('/api/messages', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ content: content })
                 });
-
-                // 서버로부터 정상적인 응답(id가 포함된 메시지 객체)을 받습니다.
                 if (!response.ok) {
                     throw new Error('서버 응답에 문제가 있습니다.');
                 }
-
                 const newMessage = await response.json();
-
-                // 2. 서버로부터 받은 데이터로 화면에 말풍선을 생성합니다.
                 createBubbleElement(newMessage);
-
-                // 3. 입력창을 비웁니다.
                 input.value = '';
-
             } catch (error) {
                 console.error('메시지 전송 실패:', error);
                 alert('메시지 전송에 실패했습니다.');
@@ -385,23 +377,6 @@
         });
 
         loadMessages();
-    });
-
-    // ----- 아코디언 기능 -----
-    const songTitles = document.querySelectorAll('.song-title');
-
-    songTitles.forEach(title => {
-        title.addEventListener('click', () => {
-            // 현재 클릭한 아이템의 active 상태를 토글
-            title.classList.toggle('active');
-
-            const performers = title.nextElementSibling;
-            if (performers.style.maxHeight) {
-                performers.style.maxHeight = null; // 닫기
-            } else {
-                performers.style.maxHeight = performers.scrollHeight + "px"; // 열기
-            }
-        });
     });
 </script>
 </body>
